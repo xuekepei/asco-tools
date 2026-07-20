@@ -46,7 +46,7 @@ pnpm db:studio          # Drizzle Studio
 pnpm stripe:verify      # 校验导出积分包的 Price 配置
 ```
 
-**构建必须使用 Webpack**：`build` 脚本显式带 `--webpack` 标志，因为 Turbopack 与 AI SDK v7 组合在本项目会停滞。不要移除该标志。
+**构建与开发都必须使用 Webpack**：`build` 与 `dev` 脚本均显式带 `--webpack` 标志。Turbopack 与本项目不兼容：build 会停滞（AI SDK v7 组合），dev 会反复 panic（`Failed to write app endpoint`）导致浏览器无限刷新。不要移除这两个标志。
 
 ## 部署（Docker）
 
