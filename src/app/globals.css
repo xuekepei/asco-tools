@@ -41,19 +41,21 @@ button, a { -webkit-tap-highlight-color: transparent; }
       padding: 1.25rem;
     }
   }
-  .help-linked[data-help-highlighted] {
-    background-color: rgb(223 241 227 / 85%);
-    outline: 2px dashed rgb(45 116 88 / 80%);
-    outline-offset: 3px;
-  }
-  aside .help-linked[data-help-highlighted] {
-    border-color: rgb(45 116 88 / 45%);
-    box-shadow: 0 6px 20px rgb(23 76 60 / 12%);
-  }
   .help-example { @apply transition duration-200; }
-  .help-linked[data-help-highlighted] .help-example {
-    background-color: rgb(180 221 194);
-    box-shadow: inset 0 0 0 1.5px rgb(45 116 88 / 55%);
-    color: rgb(26 66 50);
-  }
+}
+
+/* 高亮态放在 layer 外：卡片自带的 bg-white、bg-[#eef5ed] 等 utilities
+   位于 utilities 层，会覆盖 components 层同属性；layer 外规则优先于所有 layer。 */
+.help-linked[data-help-highlighted] {
+  background-color: rgb(223 241 227 / 85%);
+  outline: 2px dashed rgb(45 116 88 / 80%);
+  outline-offset: 3px;
+}
+aside .help-linked[data-help-highlighted] {
+  border-color: rgb(45 116 88 / 45%);
+  box-shadow: 0 6px 20px rgb(23 76 60 / 12%);
+}
+.help-linked[data-help-highlighted] .help-example {
+  background-color: #fff;
+  box-shadow: inset 0 0 0 1.5px rgb(45 116 88 / 45%);
 }
