@@ -8,22 +8,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 技术栈：Next.js 16（App Router）/ React 19 / TypeScript / Tailwind CSS 4 / Better Auth / Drizzle ORM + MariaDB / Vercel AI SDK 7 / ExcelJS + PDFKit / Vitest。包管理器为 pnpm，Node >= 22（`.node-version` 指定 22.22.2）。
 
-> **注意（来自 web/AGENTS.md）**：本项目使用的 Next.js 版本与训练数据可能存在破坏性差异。编写 Next.js 相关代码前先阅读 `web/node_modules/next/dist/docs/` 中的相关文档，并留意弃用提示。
+> **注意（来自 AGENTS.md）**：本项目使用的 Next.js 版本与训练数据可能存在破坏性差异。编写 Next.js 相关代码前先阅读 `node_modules/next/dist/docs/` 中的相关文档，并留意弃用提示。
 
 ## 仓库布局
 
-实际应用位于 `web/` 目录（所有命令都在 `web/` 下执行）。其余位置：
+应用位于仓库根目录（所有命令都在根目录执行）。文档与参考资料：
 
-- `web/docs/001679511(3).xlsx` — 厚生劳动省原版「年度更新申告書計算支援ツール（継続事業用）」Excel，是本项目的对照源文件（只读，勿修改）。
-- `web/docs/excel-mapping.md` — 与原 Excel 的字段、工作表、公式对照记录。
-- `web/docs/stripe-integration-plan.md` — 计费（导出积分）设计文档。
+- `docs/001679511(3).xlsx` — 厚生劳动省原版「年度更新申告書計算支援ツール（継続事業用）」Excel，是本项目的对照源文件（只读，勿修改）。
+- `docs/excel-mapping.md` — 与原 Excel 的字段、工作表、公式对照记录。
+- `docs/stripe-integration-plan.md` — 计费（导出积分）设计文档。
+- `docs/verify-export-credit-schema.sql` — 导出积分表结构的校验 SQL。
 - `.agents/skills/` — Stripe 官方 agent skills（stripe-best-practices 等），处理 Stripe 相关改动前可参考。
 
 ## 常用命令
 
 ```bash
-cd web
-
 # 本地启动（首次）
 cp .env.example .env.local
 docker compose up -d mariadb
@@ -57,11 +56,11 @@ pnpm stripe:verify      # 校验导出积分包的 Price 配置
 - `declarationSchema`（Zod）是申告数据结构的唯一权威定义；DB 中 `renewal_declaration.formData` 以 JSON 存储，读取时经 `normalizeDeclaration` 归一化。
 - `calculateDeclaration` 计算劳灾/雇用保险、一般拠出金、确定/概算保险料、充当/还付与分纳；`detectDeclarationAnomalies` 做无需 API Key 的本地异常检查。
 - **设计约束：LLM 不得自行计算金额**。AI 申告助手（`src/app/api/assistant/route.ts`）只通过只读工具 `calculateDeclarationSummary` / `inspectDeclaration` 调用领域函数，禁止保存、修改、提交、导出操作。
-- **修改计算逻辑前必须对照 `web/docs/excel-mapping.md`**（含舍入规则：算定基础额舍去不足 1,000 円、一元适用合并费率、分纳余数入第 1 期等）。
+- **修改计算逻辑前必须对照 `docs/excel-mapping.md`**（含舍入规则：算定基础额舍去不足 1,000 円、一元适用合并费率、分纳余数入第 1 期等）。
 
 ### 数据与认证
 
-- Drizzle schema 在 `src/db/schema.ts`，迁移 SQL 在 `web/drizzle/`（由 `db:generate` 生成，勿手改）。DB 连接在 `src/db/index.ts`（mysql2 连接池，dev 模式挂在 globalThis 上防止热重载重复建池）。
+- Drizzle schema 在 `src/db/schema.ts`，迁移 SQL 在 `drizzle/`（由 `db:generate` 生成，勿手改）。DB 连接在 `src/db/index.ts`（mysql2 连接池，dev 模式挂在 globalThis 上防止热重载重复建池）。
 - Better Auth（`src/lib/auth.ts`）：邮箱密码认证 + admin 插件。服务端获取用户统一走 `getCurrentUser()`（`src/lib/current-user.ts`）。
 - 权限三级：`user` / `support`（管理数据只读）/ `admin`（可改角色与计划）。`ADMIN_EMAILS` 环境变量可引导初始管理员（`src/lib/admin.ts` 的 `getAdminContext`）。管理端写操作记录到 `admin_audit_log`。
 
