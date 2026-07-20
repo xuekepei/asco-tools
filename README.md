@@ -18,7 +18,7 @@
 
 ```bash
 cp .env.example .env.local
-docker compose up -d mariadb
+./scripts/dev-db.sh
 pnpm db:migrate
 pnpm dev
 ```

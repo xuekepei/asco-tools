@@ -19,4 +19,3 @@ README.md
 # Docker 自身
 Dockerfile
 .dockerignore
-docker-compose.yml

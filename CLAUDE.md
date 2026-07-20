@@ -25,7 +25,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # 本地启动（首次）
 cp .env.example .env.local
-docker compose up -d mariadb
+./scripts/dev-db.sh     # 启动开发用 MariaDB（docker，数据在命名卷 asco-tools_mariadb_data）
 pnpm db:migrate
 pnpm dev                # http://localhost:3000
 
@@ -50,14 +50,15 @@ pnpm stripe:verify      # 校验导出积分包的 Price 配置
 ## 部署（Docker）
 
 ```bash
-docker build -t asco-tools .                    # 多阶段构建，产出 standalone 运行镜像
-docker compose --profile app up -d --build      # 本地验证生产镜像（app + mariadb 整栈）
+docker build --load -t asco-tools .   # 多阶段构建，产出 standalone 运行镜像
+./scripts/run-app.sh                  # 构建并启动应用容器（本地验证生产镜像）
+./scripts/dev-db.sh                   # 启动/复用 MariaDB 容器（含健康检查等待）
 ```
 
+- 不使用 docker compose；`scripts/dev-db.sh` 与 `scripts/run-app.sh` 用纯 docker 命令管理容器，二者共享 docker 网络 `asco-tools`，应用容器内以主机名 `asco-tools-mariadb` 连接数据库。
 - `next.config.ts` 开启了 `output: "standalone"`；PDF 日文字体（`@fontsource/noto-sans-jp`）经 `outputFileTracingIncludes` 显式打入 standalone，改动导出路由路径时需同步该配置的 route key。
 - 镜像只含应用运行时，不含迁移工具。**数据库迁移在镜像外执行**（由用户在构建机/CI 上以指向目标库的 `DATABASE_URL` 运行 `pnpm db:migrate`）。
-- 生产环境必须显式设置 `BETTER_AUTH_SECRET`（≥32 字符）与 `BETTER_AUTH_URL`；`env.ts` 的默认值仅供本地开发。
-- compose 的 `app` 服务挂在 `profiles: ["app"]` 下，日常开发 `docker compose up -d mariadb` 不会启动它。
+- 生产环境必须显式设置 `BETTER_AUTH_SECRET`（≥32 字符）与 `BETTER_AUTH_URL`；`env.ts` 的默认值与 `run-app.sh` 的回退值仅供本地开发。
 
 ## 架构
 
