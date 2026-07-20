@@ -124,27 +124,13 @@ function helpKeyFromTarget(target: EventTarget | null) {
   return labelText ? labelHelpKeys[labelText] ?? null : null;
 }
 
-const countFields: { key: keyof MonthEntry; label: string }[] = [
-  { key: "regularWorkers", label: "常用" },
-  { key: "officerWorkers", label: "役員" },
-  { key: "temporaryWorkers", label: "臨時" },
-  { key: "insuredWorkers", label: "雇用被保険者" },
-  { key: "insuredOfficerWorkers", label: "役員(雇用)" },
+const wageGroups: { countKey: keyof MonthEntry; wageKey: keyof MonthEntry; label: string; helpKey: string }[] = [
+  { countKey: "regularWorkers", wageKey: "regularWages", label: "常用", helpKey: "regularWorkers" },
+  { countKey: "officerWorkers", wageKey: "officerWages", label: "役員", helpKey: "officerWorkers" },
+  { countKey: "temporaryWorkers", wageKey: "temporaryWages", label: "臨時", helpKey: "temporaryWorkers" },
+  { countKey: "insuredWorkers", wageKey: "insuredWages", label: "雇用被保険者", helpKey: "insuredWorkers" },
+  { countKey: "insuredOfficerWorkers", wageKey: "insuredOfficerWages", label: "役員(雇用)", helpKey: "insuredWorkers" },
 ];
-const wageFields: { key: keyof MonthEntry; label: string }[] = [
-  { key: "regularWages", label: "常用賃金" },
-  { key: "officerWages", label: "役員賃金" },
-  { key: "temporaryWages", label: "臨時賃金" },
-  { key: "insuredWages", label: "雇用賃金" },
-  { key: "insuredOfficerWages", label: "役員(雇用)賃金" },
-];
-
-function wageHelpKey(key: keyof MonthEntry) {
-  if (key.startsWith("regular")) return "regularWorkers";
-  if (key.startsWith("officer")) return "officerWorkers";
-  if (key.startsWith("temporary")) return "temporaryWorkers";
-  return "insuredWorkers";
-}
 
 export function DeclarationWorkspace({ user, aiEnabled, isAdmin, initialView = "list", initialSection = "business", initialDeclaration = null }: { user: { name: string; email: string }; aiEnabled: boolean; isAdmin: boolean; initialView?: WorkspaceView; initialSection?: Section; initialDeclaration?: { id: string; formData: unknown } | null }) {
   const router = useRouter();
@@ -251,6 +237,30 @@ export function DeclarationWorkspace({ user, aiEnabled, isAdmin, initialView = "
       ...current,
       bonusEntries: current.bonusEntries.map((entry, entryIndex) =>
         entryIndex === index ? { ...entry, [key]: value } : entry,
+      ),
+    }));
+  };
+
+  const copyPreviousMonth = (index: number) => {
+    if (index === 0) return;
+    editVersion.current += 1;
+    setDirty(true);
+    setData((current) => ({
+      ...current,
+      months: current.months.map((month, monthIndex) =>
+        monthIndex === index ? { ...current.months[index - 1], month: month.month } : month,
+      ),
+    }));
+  };
+
+  const applyFirstMonthToAll = () => {
+    if (!window.confirm("4月の人数・賃金をすべての月にコピーします。既に入力した5月以降の値は上書きされます。よろしいですか？")) return;
+    editVersion.current += 1;
+    setDirty(true);
+    setData((current) => ({
+      ...current,
+      months: current.months.map((month, monthIndex) =>
+        monthIndex === 0 ? month : { ...current.months[0], month: month.month },
       ),
     }));
   };
@@ -553,7 +563,7 @@ export function DeclarationWorkspace({ user, aiEnabled, isAdmin, initialView = "
           >
             <div className="min-w-0">
               {section === "business" && <BusinessSection data={data} errors={fieldErrors} update={update} />}
-              {section === "wages" && <WagesSection data={data} updateMonth={updateMonth} updateBonus={updateBonus} updateOfficer={updateOfficer} result={result} />}
+              {section === "wages" && <WagesSection data={data} updateMonth={updateMonth} updateBonus={updateBonus} updateOfficer={updateOfficer} copyPreviousMonth={copyPreviousMonth} applyFirstMonthToAll={applyFirstMonthToAll} result={result} />}
               {section === "rates" && <RatesSection data={data} update={update} result={result} />}
               {section === "review" && <ReviewSection data={data} result={result} exportFile={exportFile} />}
             </div>
@@ -676,11 +686,16 @@ function BusinessSection({ data, errors, update }: { data: DeclarationInput; err
   );
 }
 
-function NumberCell({ value, helpKey, onChange }: { value: number; helpKey: string; onChange: (value: string) => void }) { return <input data-help-key={helpKey} className="help-linked h-10 w-full min-w-24 rounded-lg border border-[#dfe5df] bg-white px-2.5 text-right text-sm outline-none focus:border-[#2d7458] focus:ring-3 focus:ring-[#2d7458]/10" type="number" min="0" value={value || ""} placeholder="0" onChange={(e) => onChange(e.target.value)} />; }
+function NumberCell({ value, helpKey, unit, onChange }: { value: number; helpKey: string; unit: string; onChange: (value: string) => void }) {
+  return <span className="relative block">
+    <input data-help-key={helpKey} className="help-linked h-9 w-full rounded-lg border border-[#dfe5df] bg-white pl-2 pr-7 text-right text-sm outline-none focus:border-[#2d7458] focus:ring-3 focus:ring-[#2d7458]/10" type="number" min="0" value={value || ""} placeholder="0" onChange={(e) => onChange(e.target.value)} />
+    <span className="pointer-events-none absolute inset-y-0 right-2 grid place-items-center text-xs text-[#9aa49d]">{unit}</span>
+  </span>;
+}
 
-function WagesSection({ data, updateMonth, updateBonus, updateOfficer, result }: { data: DeclarationInput; updateMonth: (index: number, key: keyof MonthEntry, value: string) => void; updateBonus: (index: number, key: keyof MonthEntry, value: string) => void; updateOfficer: <K extends keyof OfficerDetail>(index: number, key: K, value: OfficerDetail[K]) => void; result: ReturnType<typeof calculateDeclaration> }) {
-  const wageRows = (entries: MonthEntry[], updater: (index: number, key: keyof MonthEntry, value: string) => void, bonuses = false) => entries.map((entry, index) => <tr key={entry.month} className="border-t border-[#edf0ed] hover:bg-[#fafbf8]"><th className="sticky left-0 z-10 whitespace-nowrap bg-white px-4 py-3 text-left font-semibold">{entry.month}</th>{countFields.map((field) => <td key={field.key} className="px-2 py-2"><NumberCell helpKey={bonuses ? "bonuses" : wageHelpKey(field.key)} value={entry[field.key] as number} onChange={(v) => updater(index, field.key, v)} /></td>)}{wageFields.map((field) => <td key={field.key} className="px-2 py-2"><NumberCell helpKey={bonuses ? "bonuses" : wageHelpKey(field.key)} value={entry[field.key] as number} onChange={(v) => updater(index, field.key, v)} /></td>)}</tr>);
-  return <div className="space-y-5"><section className="panel overflow-hidden"><div className="flex flex-col justify-between gap-3 border-b border-[#e5eae5] p-6 sm:flex-row sm:items-center"><div><h2 className="font-semibold">月別・賞与 人数／賃金</h2><p className="mt-1 text-sm text-[#77837b]">金額は円単位で入力してください</p></div><span className="rounded-full bg-[#eef5ed] px-3 py-1.5 text-xs font-semibold text-[#397055]">12か月＋賞与3回</span></div><div className="overflow-x-auto"><table className="w-full min-w-[1120px] border-collapse text-sm"><thead><tr className="bg-[#f4f6f2] text-left text-xs text-[#66736b]"><th className="sticky left-0 z-10 whitespace-nowrap bg-[#f4f6f2] px-4 py-3">月</th>{countFields.map((f) => <th key={f.key} data-help-key={wageHelpKey(f.key)} className="help-linked px-2 py-3 text-center">{f.label}<span className="block font-normal">人数</span></th>)}{wageFields.map((f) => <th key={f.key} data-help-key={wageHelpKey(f.key)} className="help-linked px-2 py-3 text-center">{f.label}<span className="block font-normal">円</span></th>)}</tr></thead><tbody>{wageRows(data.months, updateMonth)}<tr><th colSpan={11} data-help-key="bonuses" className="help-linked bg-[#eef5ed] px-4 py-2 text-left text-xs font-semibold text-[#397055]">賞与</th></tr>{wageRows(data.bonusEntries, updateBonus, true)}</tbody></table></div></section><section data-help-key="officerWorkers" className="help-linked panel p-6"><h2 className="font-semibold">役員で労働者扱いの詳細</h2><p className="mt-1 text-sm text-[#77837b]">賃金に含めた「労働者扱いの役員」の氏名・役職・雇用保険資格を入力します（最大5名）</p><div className="mt-5 space-y-3">{data.officerDetails.map((officer, index) => <div key={index} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"><label><span className="field-label">氏名 {index + 1}</span><input className="field-input" value={officer.name} onChange={(e) => updateOfficer(index, "name", e.target.value)} /></label><label><span className="field-label">役職</span><input className="field-input" value={officer.position} onChange={(e) => updateOfficer(index, "position", e.target.value)} /></label><label className="flex h-11 items-center gap-2 text-sm"><input type="checkbox" checked={officer.employmentInsured} onChange={(e) => updateOfficer(index, "employmentInsured", e.target.checked)} />雇用保険資格あり</label></div>)}</div></section><div className="grid gap-4 sm:grid-cols-2"><SummaryCard title="労災保険対象賃金" value={formatYen(result.workersCompWages)} detail={`月平均 ${result.averageWorkers.toLocaleString()} 人`} /><SummaryCard title="雇用保険対象賃金" value={formatYen(result.employmentWages)} detail={`月平均 ${result.averageEmploymentInsured.toLocaleString()} 人`} /></div></div>;
+function WagesSection({ data, updateMonth, updateBonus, updateOfficer, copyPreviousMonth, applyFirstMonthToAll, result }: { data: DeclarationInput; updateMonth: (index: number, key: keyof MonthEntry, value: string) => void; updateBonus: (index: number, key: keyof MonthEntry, value: string) => void; updateOfficer: <K extends keyof OfficerDetail>(index: number, key: K, value: OfficerDetail[K]) => void; copyPreviousMonth: (index: number) => void; applyFirstMonthToAll: () => void; result: ReturnType<typeof calculateDeclaration> }) {
+  const wageRows = (entries: MonthEntry[], updater: (index: number, key: keyof MonthEntry, value: string) => void, bonuses = false) => entries.map((entry, index) => <tr key={entry.month} className="border-t border-[#edf0ed] hover:bg-[#fafbf8]"><th className="whitespace-nowrap px-3 py-3 text-left align-top font-semibold sm:px-4"><span className="flex h-9 items-center gap-1.5">{entry.month}{!bonuses && index > 0 && <button type="button" title="前月と同じ値にする" aria-label={`${entry.month}に前月の値をコピー`} className="rounded-md p-1 text-[#8a958d] opacity-70 transition hover:bg-[#e5f0e7] hover:text-[#1e6349] hover:opacity-100" onClick={() => copyPreviousMonth(index)}><Copy size={14} /></button>}</span></th>{wageGroups.map((group) => <td key={group.countKey} className="px-1.5 py-2 sm:px-2"><div className="space-y-1.5"><NumberCell helpKey={bonuses ? "bonuses" : group.helpKey} unit="人" value={entry[group.countKey] as number} onChange={(v) => updater(index, group.countKey, v)} /><NumberCell helpKey={bonuses ? "bonuses" : group.helpKey} unit="円" value={entry[group.wageKey] as number} onChange={(v) => updater(index, group.wageKey, v)} /></div></td>)}</tr>);
+  return <div className="space-y-5"><section className="panel overflow-hidden"><div className="flex flex-col justify-between gap-3 border-b border-[#e5eae5] p-6 sm:flex-row sm:items-center"><div><h2 className="font-semibold">月別・賞与 人数／賃金</h2><p className="mt-1 text-sm text-[#77837b]">各セルの上段に人数、下段に賃金（円）を入力してください</p></div><div className="flex items-center gap-3"><button type="button" className="button-secondary !px-3 !py-2 text-xs" onClick={applyFirstMonthToAll}><Copy size={14} />4月を全月に適用</button><span className="rounded-full bg-[#eef5ed] px-3 py-1.5 text-xs font-semibold text-[#397055]">12か月＋賞与3回</span></div></div><div className="overflow-x-auto"><table className="w-full min-w-[560px] border-collapse text-sm"><thead><tr className="bg-[#f4f6f2] text-left text-xs text-[#66736b]"><th className="whitespace-nowrap px-3 py-3 sm:px-4">月</th>{wageGroups.map((group) => <th key={group.countKey} data-help-key={group.helpKey} className="help-linked px-2 py-3 text-center font-semibold">{group.label}<span className="block font-normal">人数／円</span></th>)}</tr></thead><tbody>{wageRows(data.months, updateMonth)}<tr><th colSpan={6} data-help-key="bonuses" className="help-linked bg-[#eef5ed] px-4 py-2 text-left text-xs font-semibold text-[#397055]">賞与</th></tr>{wageRows(data.bonusEntries, updateBonus, true)}</tbody></table></div></section><section data-help-key="officerWorkers" className="help-linked panel p-6"><h2 className="font-semibold">役員で労働者扱いの詳細</h2><p className="mt-1 text-sm text-[#77837b]">賃金に含めた「労働者扱いの役員」の氏名・役職・雇用保険資格を入力します（最大5名）</p><div className="mt-5 space-y-3">{data.officerDetails.map((officer, index) => <div key={index} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"><label><span className="field-label">氏名 {index + 1}</span><input className="field-input" value={officer.name} onChange={(e) => updateOfficer(index, "name", e.target.value)} /></label><label><span className="field-label">役職</span><input className="field-input" value={officer.position} onChange={(e) => updateOfficer(index, "position", e.target.value)} /></label><label className="flex h-11 items-center gap-2 text-sm"><input type="checkbox" checked={officer.employmentInsured} onChange={(e) => updateOfficer(index, "employmentInsured", e.target.checked)} />雇用保険資格あり</label></div>)}</div></section><div className="grid gap-4 sm:grid-cols-2"><SummaryCard title="労災保険対象賃金" value={formatYen(result.workersCompWages)} detail={`月平均 ${result.averageWorkers.toLocaleString()} 人`} /><SummaryCard title="雇用保険対象賃金" value={formatYen(result.employmentWages)} detail={`月平均 ${result.averageEmploymentInsured.toLocaleString()} 人`} /></div></div>;
 }
 
 function RatesSection({ data, update, result }: { data: DeclarationInput; update: <K extends keyof DeclarationInput>(key: K, value: DeclarationInput[K]) => void; result: ReturnType<typeof calculateDeclaration> }) {
