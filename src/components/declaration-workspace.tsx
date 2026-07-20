@@ -508,7 +508,7 @@ export function DeclarationWorkspace({ user, aiEnabled, isAdmin, initialView = "
         <div className={cn("mx-auto", view === "editor" ? "max-w-[1480px]" : "max-w-[1180px]")}>
           {view === "list" && <RecordsView records={records} exports={exportHistory} loading={workspaceLoading} onNew={newDeclaration} onOpen={openDeclaration} onCopy={copyDeclaration} onDelete={deleteDeclaration} />}
           {view === "settings" && <CreditSettingsView email={user.email} name={accountName} billing={billingInfo} saving={accountSaving} billingLoading={billingLoading} onNameChange={setAccountName} onSave={saveAccount} onCheckout={openCheckout} />}
-          {view === "editor" && <><nav aria-label="入力ステップ" className="mb-6 rounded-2xl border border-[#e0e6e0] bg-white px-3 py-3 sm:px-5">
+          {view === "editor" && <><nav aria-label="入力ステップ" className="sticky top-20 z-20 mb-6 rounded-2xl border border-[#e0e6e0] bg-white px-3 py-3 shadow-[0_10px_30px_rgba(28,55,39,.08)] sm:px-5">
             <ol className="flex items-center">
               {sections.map((item, index) => {
                 const state = index < sectionIndex ? "done" : index === sectionIndex ? "current" : "todo";
