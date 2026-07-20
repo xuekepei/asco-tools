@@ -717,7 +717,8 @@ function WagesSection({ data, updateMonth, updateBonus, updateOfficer, copyPrevi
       right = Math.max(right, rect.right);
       bottom = Math.max(bottom, rect.bottom);
     });
-    const pad = 4;
+    // 枠はセル境界ちょうどに引く：隣接セルの入力欄と自セルの入力欄から等距離になる
+    const pad = 0;
     const frameTop = Math.max(0, top - wrapRect.top - pad);
     const frameLeft = Math.max(0, left - wrapRect.left - pad);
     const frameRight = Math.min(wrapRect.width, right - wrapRect.left + pad);
