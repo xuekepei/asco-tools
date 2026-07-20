@@ -19,13 +19,14 @@ else
     -e MARIADB_USER=labor_app \
     -e MARIADB_PASSWORD=labor_app_password \
     -e MARIADB_ROOT_PASSWORD=local_root_password \
+    -e MARIADB_AUTO_UPGRADE=1 \
     -p 3306:3306 \
     -v "$VOLUME":/var/lib/mysql \
     --health-cmd 'healthcheck.sh --connect --innodb_initialized' \
     --health-interval 5s \
     --health-timeout 3s \
     --health-retries 20 \
-    mariadb:11.8 >/dev/null
+    mariadb:12.3 >/dev/null
 fi
 
 echo -n "Waiting for MariaDB to become healthy"

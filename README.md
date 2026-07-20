@@ -6,7 +6,7 @@
 
 - Next.js 16 / React 19 / TypeScript / Tailwind CSS 4
 - Better Auth（メールアドレス・パスワード認証）
-- Drizzle ORM + MariaDB 11.8
+- Drizzle ORM + MariaDB 12.3
 - Zod（API 境界と業務入力の検証）
 - Vercel AI SDK 7 + OpenAI Provider（流式申告助手）
 - ExcelJS / PDFKit + Noto Sans JP（有料エクスポート）
