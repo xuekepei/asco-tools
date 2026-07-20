@@ -502,15 +502,45 @@ export function DeclarationWorkspace({ user, aiEnabled, isAdmin, initialView = "
         </div>
       </header>
 
-      <Sidebar open={mobileNav} onClose={() => setMobileNav(false)} user={{ ...user, name: accountName }} isAdmin={isAdmin} view={view} section={section} setView={(next) => { void navigateWorkspace(next); setMobileNav(false); }} setSection={(next) => { void navigateSection(next).then((moved) => { if (moved) setMobileNav(false); }); }} />
+      <Sidebar open={mobileNav} onClose={() => setMobileNav(false)} user={{ ...user, name: accountName }} isAdmin={isAdmin} view={view} setView={(next) => { void navigateWorkspace(next); setMobileNav(false); }} />
 
       <main className="px-4 pb-16 pt-24 lg:ml-[256px] lg:px-10">
         <div className={cn("mx-auto", view === "editor" ? "max-w-[1480px]" : "max-w-[1180px]")}>
           {view === "list" && <RecordsView records={records} exports={exportHistory} loading={workspaceLoading} onNew={newDeclaration} onOpen={openDeclaration} onCopy={copyDeclaration} onDelete={deleteDeclaration} />}
           {view === "settings" && <CreditSettingsView email={user.email} name={accountName} billing={billingInfo} saving={accountSaving} billingLoading={billingLoading} onNameChange={setAccountName} onSave={saveAccount} onCheckout={openCheckout} />}
-          {view === "editor" && <><div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-            <div><p className="text-sm font-semibold text-[#2e765a]">STEP {sectionIndex + 1} OF 4</p><h1 className="mt-2 text-3xl font-semibold tracking-[-.035em]">{sections[sectionIndex].label}</h1><p className="mt-2 text-[#6c7870]">{section === "wages" ? "4月から翌年3月までの人数と賃金を入力します。" : "申告書の内容に沿って必要な項目を入力してください。"}</p></div>
-            <div className="flex items-center gap-1">{sections.map((item, index) => <span key={item.id} className={cn("h-1.5 w-10 rounded-full", index <= sectionIndex ? "bg-[#2c7357]" : "bg-[#d9dfda]")} />)}</div>
+          {view === "editor" && <><nav aria-label="入力ステップ" className="mb-6 rounded-2xl border border-[#e0e6e0] bg-white px-3 py-3 sm:px-5">
+            <ol className="flex items-center">
+              {sections.map((item, index) => {
+                const state = index < sectionIndex ? "done" : index === sectionIndex ? "current" : "todo";
+                return (
+                  <li key={item.id} className={cn("flex min-w-0 items-center", index > 0 && "flex-1")}>
+                    {index > 0 && <span aria-hidden className={cn("mx-2 h-px min-w-4 flex-1 sm:mx-3", index <= sectionIndex ? "bg-[#2c7357]" : "bg-[#dfe5df]")} />}
+                    <button
+                      type="button"
+                      disabled={saving}
+                      aria-current={state === "current" ? "step" : undefined}
+                      onClick={() => void navigateSection(item.id)}
+                      className={cn("group flex min-w-0 items-center gap-2.5 rounded-xl px-1.5 py-1 transition", state === "todo" ? "text-[#8a958d] hover:text-[#4c5a51]" : "text-[#1e6349]")}
+                    >
+                      <span className={cn(
+                        "grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold transition",
+                        state === "done" && "bg-[#e5f0e7] text-[#1e6349]",
+                        state === "current" && "bg-[#174c3c] text-white shadow-[0_4px_12px_rgba(23,76,60,.28)]",
+                        state === "todo" && "bg-[#eef1ed] group-hover:bg-[#e4e9e4]",
+                      )}>
+                        {state === "done" ? <Check size={15} /> : item.short}
+                      </span>
+                      <span className={cn("truncate text-sm", state === "current" ? "font-semibold" : "hidden font-medium md:inline")}>{item.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+
+          <div className="mb-8">
+            <h1 className="text-3xl font-semibold tracking-[-.035em]">{sections[sectionIndex].label}</h1>
+            <p className="mt-2 text-[#6c7870]">{section === "wages" ? "4月から翌年3月までの人数と賃金を入力します。" : "申告書の内容に沿って必要な項目を入力してください。"}</p>
           </div>
 
           <div
@@ -555,11 +585,10 @@ export function DeclarationWorkspace({ user, aiEnabled, isAdmin, initialView = "
   );
 }
 
-function Sidebar({ open, onClose, user, isAdmin, view, section, setView, setSection }: { open: boolean; onClose: () => void; user: { name: string; email: string }; isAdmin: boolean; view: WorkspaceView; section: Section; setView: (view: WorkspaceView) => void; setSection: (section: Section) => void }) {
+function Sidebar({ open, onClose, user, isAdmin, view, setView }: { open: boolean; onClose: () => void; user: { name: string; email: string }; isAdmin: boolean; view: WorkspaceView; setView: (view: WorkspaceView) => void }) {
   return <><div className={cn("fixed inset-0 z-40 bg-black/30 transition lg:hidden", open ? "opacity-100" : "pointer-events-none opacity-0")} onClick={onClose} /><aside className={cn("fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-[#dfe5df] bg-[#fbfcf9] p-4 transition-transform lg:z-40 lg:translate-x-0", open ? "translate-x-0" : "-translate-x-full")}>
     <div className="flex h-12 items-center justify-between px-2"><Link href="/" className="flex items-center gap-3 font-semibold"><span className="grid size-9 place-items-center rounded-xl bg-[#174c3c] text-white">年</span>年度更新ナビ</Link><button className="lg:hidden" onClick={onClose}><X size={20} /></button></div>
-    <nav className="mt-7 space-y-1"><p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[.16em] text-[#909a93]">申告書を作成</p>{sections.map((item) => <button key={item.id} onClick={() => setSection(item.id)} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition", view === "editor" && section === item.id ? "bg-[#e5f0e7] text-[#1e6349]" : "text-[#5f6c64] hover:bg-black/5")}><span className={cn("grid size-7 place-items-center rounded-lg text-xs", view === "editor" && section === item.id ? "bg-white" : "bg-[#eef1ed]")}>{item.short}</span>{item.label}</button>)}</nav>
-    <div className="mt-8 space-y-1 border-t border-[#e2e7e2] pt-5"><button onClick={() => setView("list")} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm", view === "list" ? "bg-[#e5f0e7] text-[#1e6349]" : "text-[#657169]")}><LayoutDashboard size={18} />申告書一覧</button><button onClick={() => setView("settings")} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm", view === "settings" ? "bg-[#e5f0e7] text-[#1e6349]" : "text-[#657169]")}><Settings size={18} />設定</button>{isAdmin && <Link href="/admin" className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#657169] hover:bg-black/5"><ShieldCheck size={18} />管理コンソール</Link>}</div>
+    <nav className="mt-7 space-y-1"><button onClick={() => setView("list")} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm", view === "list" ? "bg-[#e5f0e7] text-[#1e6349]" : "text-[#657169] hover:bg-black/5")}><LayoutDashboard size={18} />申告書一覧</button><button onClick={() => setView("settings")} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm", view === "settings" ? "bg-[#e5f0e7] text-[#1e6349]" : "text-[#657169] hover:bg-black/5")}><Settings size={18} />設定</button>{isAdmin && <Link href="/admin" className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#657169] hover:bg-black/5"><ShieldCheck size={18} />管理コンソール</Link>}</nav>
     <div className="mt-auto rounded-2xl border border-[#dfe5df] bg-white p-3"><div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-full bg-[#e7f0e8] text-sm font-semibold text-[#28654e]">{user.name.slice(0, 1).toUpperCase()}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{user.name}</p><p className="truncate text-xs text-[#879189]">{user.email}</p></div><button aria-label="ログアウト" onClick={() => authClient.signOut({ fetchOptions: { onSuccess: () => { window.location.href = "/"; } } })}><LogOut size={17} className="text-[#7c8780]" /></button></div></div>
   </aside></>;
 }
