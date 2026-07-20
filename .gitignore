@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# pnpm local store
+.pnpm-store/
+
+# Claude Code local settings
+.claude/settings.local.json

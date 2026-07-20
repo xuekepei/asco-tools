@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1784466522755,
+      "tag": "0000_overrated_rocket_racer",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1784470192669,
+      "tag": "0001_sloppy_mentor",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1784474769250,
+      "tag": "0002_acoustic_wonder_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1784474832443,
+      "tag": "0003_cuddly_firebrand",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1784476654338,
+      "tag": "0004_bouncy_madame_hydra",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1784481989568,
+      "tag": "0005_abandoned_madame_web",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1784515397909,
+      "tag": "0006_dazzling_gwen_stacy",
+      "breakpoints": true
+    }
+  ]
+}
