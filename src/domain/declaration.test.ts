@@ -166,7 +166,7 @@ describe("detectDeclarationAnomalies", () => {
 
     expect(detectDeclarationAnomalies(input)).toContainEqual(
       expect.objectContaining({
-        title: "雇用保険率が原表の設定値と異なります",
+        title: "雇用保険率が事業区分の標準値と異なります",
       }),
     );
   });

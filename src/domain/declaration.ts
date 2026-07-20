@@ -345,7 +345,7 @@ export function detectDeclarationAnomalies(
     anomalies.push({
       severity: "info",
       title: "労働保険番号の形式を確認してください",
-      detail: "原表の形式は「00-0-00-000000-000」です。",
+      detail: "「00-0-00-000000-000」の形式で入力してください。",
     });
   }
 
@@ -356,8 +356,8 @@ export function detectDeclarationAnomalies(
   ) {
     anomalies.push({
       severity: "warning",
-      title: "雇用保険率が原表の設定値と異なります",
-      detail: `選択した事業区分の原表設定は確定 ${expectedRates.finalized}、概算 ${expectedRates.estimated}（千分率）です。最新の公式料率も確認してください。`,
+      title: "雇用保険率が事業区分の標準値と異なります",
+      detail: `選択した事業区分の標準値は確定 ${expectedRates.finalized}、概算 ${expectedRates.estimated}（千分率）です。最新の公式料率も確認してください。`,
     });
   }
 
