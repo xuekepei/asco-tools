@@ -1,0 +1,22 @@
+.git
+.next
+node_modules
+.pnpm-store
+.env*
+.DS_Store
+*.tsbuildinfo
+coverage
+
+# 镜像不需要的文档与本地工具配置
+docs
+.claude
+.agents
+skills-lock.json
+CLAUDE.md
+AGENTS.md
+README.md
+
+# Docker 自身
+Dockerfile
+.dockerignore
+docker-compose.yml

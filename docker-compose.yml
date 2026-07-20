@@ -19,5 +19,21 @@ services:
       timeout: 3s
       retries: 20
 
+  # 整机部署/本地验证生产镜像时使用：docker compose --profile app up -d --build
+  # 日常开发仍然只启动 mariadb（pnpm dev 跑在宿主机）。
+  app:
+    build: .
+    profiles: ["app"]
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql://labor_app:labor_app_password@mariadb:3306/labor_insurance
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-local-development-secret-change-before-production}
+    ports:
+      - "3000:3000"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
 volumes:
   mariadb_data:

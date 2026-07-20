@@ -47,6 +47,18 @@ pnpm stripe:verify      # 校验导出积分包的 Price 配置
 
 **构建必须使用 Webpack**：`build` 脚本显式带 `--webpack` 标志，因为 Turbopack 与 AI SDK v7 组合在本项目会停滞。不要移除该标志。
 
+## 部署（Docker）
+
+```bash
+docker build -t asco-tools .                    # 多阶段构建，产出 standalone 运行镜像
+docker compose --profile app up -d --build      # 本地验证生产镜像（app + mariadb 整栈）
+```
+
+- `next.config.ts` 开启了 `output: "standalone"`；PDF 日文字体（`@fontsource/noto-sans-jp`）经 `outputFileTracingIncludes` 显式打入 standalone，改动导出路由路径时需同步该配置的 route key。
+- 镜像只含应用运行时，不含迁移工具。**数据库迁移在镜像外执行**（由用户在构建机/CI 上以指向目标库的 `DATABASE_URL` 运行 `pnpm db:migrate`）。
+- 生产环境必须显式设置 `BETTER_AUTH_SECRET`（≥32 字符）与 `BETTER_AUTH_URL`；`env.ts` 的默认值仅供本地开发。
+- compose 的 `app` 服务挂在 `profiles: ["app"]` 下，日常开发 `docker compose up -d mariadb` 不会启动它。
+
 ## 架构
 
 ### 领域层（核心）
