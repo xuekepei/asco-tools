@@ -718,7 +718,11 @@ function WagesSection({ data, updateMonth, updateBonus, updateOfficer, copyPrevi
       bottom = Math.max(bottom, rect.bottom);
     });
     const pad = 4;
-    setHelpFrame({ top: top - wrapRect.top - pad, left: left - wrapRect.left - pad, width: right - left + pad * 2, height: bottom - top + pad * 2 });
+    const frameTop = Math.max(0, top - wrapRect.top - pad);
+    const frameLeft = Math.max(0, left - wrapRect.left - pad);
+    const frameRight = Math.min(wrapRect.width, right - wrapRect.left + pad);
+    const frameBottom = Math.min(wrapRect.height, bottom - wrapRect.top + pad);
+    setHelpFrame({ top: frameTop, left: frameLeft, width: frameRight - frameLeft, height: frameBottom - frameTop });
   }, [activeHelpKey]);
 
   const wageRows = (entries: MonthEntry[], updater: (index: number, key: keyof MonthEntry, value: string) => void, bonuses = false) => entries.map((entry, index) => <tr key={entry.month} className="border-t border-[#edf0ed] hover:bg-[#fafbf8]"><th className="whitespace-nowrap px-3 py-3 text-left align-top font-semibold sm:px-4"><span className="flex h-9 items-center gap-1.5">{entry.month}{!bonuses && index > 0 && <button type="button" title="前月と同じ値にする" aria-label={`${entry.month}に前月の値をコピー`} className="rounded-md p-1 text-[#8a958d] opacity-70 transition hover:bg-[#e5f0e7] hover:text-[#1e6349] hover:opacity-100" onClick={() => copyPreviousMonth(index)}><Copy size={14} /></button>}</span></th>{wageGroups.map((group) => <td key={group.countKey} data-help-key={bonuses ? "bonuses" : group.helpKey} className="help-linked px-1.5 py-2 sm:px-2"><div className="space-y-1.5"><NumberCell unit="人" value={entry[group.countKey] as number} onChange={(v) => updater(index, group.countKey, v)} /><NumberCell unit="円" value={entry[group.wageKey] as number} onChange={(v) => updater(index, group.wageKey, v)} /></div></td>)}</tr>);
