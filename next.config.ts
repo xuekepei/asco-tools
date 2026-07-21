@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   // PDF 导出在运行时读取该字体文件，standalone 追踪不到 fs 路径拼接，需显式包含
   outputFileTracingIncludes: {
     "/api/export/pdf": [
-      "./node_modules/@fontsource/noto-sans-jp/files/noto-sans-jp-japanese-400-normal.woff",
+      "./node_modules/@fontsource/noto-sans-jp/files/noto-sans-jp-japanese-{400,700}-normal.woff",
     ],
   },
 };

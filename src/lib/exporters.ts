@@ -101,13 +101,14 @@ export async function createPdfExport(input: DeclarationInput) {
     document.on("end", () => resolve(Buffer.concat(chunks)));
     document.on("error", reject);
   });
-  const fontPath = path.join(
-    process.cwd(),
-    "node_modules/@fontsource/noto-sans-jp/files/noto-sans-jp-japanese-400-normal.woff",
-  );
-  document.registerFont("NotoJP", fontPath).font("NotoJP");
-  document.fillColor("#174c3c").fontSize(21).text("年度更新 計算結果");
+  const fontDir = path.join(process.cwd(), "node_modules/@fontsource/noto-sans-jp/files");
+  document.registerFont("NotoJP", path.join(fontDir, "noto-sans-jp-japanese-400-normal.woff"));
+  document.registerFont("NotoJP-Bold", path.join(fontDir, "noto-sans-jp-japanese-700-normal.woff"));
+  document.font("NotoJP-Bold").fillColor("#174c3c").fontSize(21).text("年度更新 計算結果");
+  document.font("NotoJP");
   document.moveDown(0.5).fillColor("#5d6c63").fontSize(10).text(`${input.fiscalYear}年度　${input.businessName}`);
+  const generatedAt = new Date().toLocaleString("ja-JP", { dateStyle: "medium", timeStyle: "short" });
+  document.moveDown(0.3).fontSize(9).text(`労働保険番号 ${input.laborInsuranceNumber || "未入力"}　／　出力日時 ${generatedAt}`);
   document.moveDown(1.3);
 
   const rows: [string, number][] = [
@@ -126,14 +127,20 @@ export async function createPdfExport(input: DeclarationInput) {
     ),
   ];
   rows.forEach(([label, value], index) => {
+    const emphasized = label === "納付見込額" || (label === "還付見込額" && value > 0);
     const y = document.y;
     if (index % 2 === 0) document.rect(46, y - 5, 503, 25).fill("#f2f5f1");
-    document.fillColor("#28372f").fontSize(10).text(label, 56, y, { width: 290 });
+    document.font(emphasized ? "NotoJP-Bold" : "NotoJP");
+    document.fillColor(emphasized ? "#174c3c" : "#28372f").fontSize(10).text(label, 56, y, { width: 290 });
     document.text(`${value.toLocaleString("ja-JP")} 円`, 355, y, { width: 180, align: "right" });
     document.y = y + 26;
   });
-  document.moveDown(1.5).fillColor("#7a867e").fontSize(8).text(
+  document.font("NotoJP").moveDown(1.5);
+  document.fillColor("#7a867e").fontSize(8).text(
     "本書は計算支援用です。提出前に公式資料と照合し、計算結果をご確認ください。",
+    46,
+    document.y,
+    { width: 503 },
   );
   document.end();
   return completed;
