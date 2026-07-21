@@ -7,8 +7,9 @@ node_modules
 *.tsbuildinfo
 coverage
 
-# 镜像不需要的文档与本地工具配置
+# 镜像不需要的文档与本地工具配置（原版 Excel 是导出模板，运行时需要）
 docs
+!docs/001679511(3).xlsx
 .claude
 .agents
 skills-lock.json

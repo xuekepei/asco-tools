@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
     "/api/export/pdf": [
       "./node_modules/@fontsource/noto-sans-jp/files/noto-sans-jp-japanese-{400,700}-normal.woff",
     ],
+    // Excel 导出以厚労省原本为模板，运行时从磁盘读取
+    "/api/export/excel": ["./docs/001679511(3).xlsx"],
   },
 };
 
