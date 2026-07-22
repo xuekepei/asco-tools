@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { exportCreditAccount, exportCreditLedger, exportLog } from "@/db/schema";
@@ -47,20 +47,26 @@ export function isDevelopmentExportBypass(email: string) {
     .includes(email.toLowerCase());
 }
 
+/**
+ * 计费粒度：每份申告书只扣 1 次。首次导出（任意格式）在既有的
+ * FOR UPDATE 事务里扣减并写 export_log；此后同一申告书的导出以
+ * export_log 中已有记录为凭据免费放行（账户锁串行化并发导出，
+ * 不会重复扣减）。
+ */
 export async function consumeExportCredit(options: {
   userId: string;
   format: "xlsx" | "pdf";
-  declarationId?: string | null;
+  declarationId: string;
   bypass?: boolean;
 }) {
   if (options.bypass) {
     await db.insert(exportLog).values({
       id: randomUUID(),
       userId: options.userId,
-      declarationId: options.declarationId ?? null,
+      declarationId: options.declarationId,
       format: options.format,
     });
-    return { allowed: true as const, remaining: null };
+    return { allowed: true as const, remaining: null, charged: false };
   }
 
   await ensureExportCreditAccount(options.userId);
@@ -71,6 +77,29 @@ export async function consumeExportCredit(options: {
       .where(eq(exportCreditAccount.userId, options.userId))
       .for("update")
       .limit(1);
+    const [alreadyCharged] = await transaction
+      .select({ id: exportLog.id })
+      .from(exportLog)
+      .where(
+        and(
+          eq(exportLog.userId, options.userId),
+          eq(exportLog.declarationId, options.declarationId),
+        ),
+      )
+      .limit(1);
+    if (alreadyCharged) {
+      await transaction.insert(exportLog).values({
+        id: randomUUID(),
+        userId: options.userId,
+        declarationId: options.declarationId,
+        format: options.format,
+      });
+      return {
+        allowed: true as const,
+        remaining: account?.balance ?? 0,
+        charged: false,
+      };
+    }
     if (!account || account.balance < 1) {
       return { allowed: false as const, remaining: 0 };
     }
@@ -87,7 +116,7 @@ export async function consumeExportCredit(options: {
     await transaction.insert(exportLog).values({
       id: exportLogId,
       userId: options.userId,
-      declarationId: options.declarationId ?? null,
+      declarationId: options.declarationId,
       format: options.format,
     });
     await transaction.insert(exportCreditLedger).values({
@@ -100,6 +129,6 @@ export async function consumeExportCredit(options: {
       exportLogId,
       description: `${options.format.toUpperCase()}出力`,
     });
-    return { allowed: true as const, remaining };
+    return { allowed: true as const, remaining, charged: true };
   });
 }
