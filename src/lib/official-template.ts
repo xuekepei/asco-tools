@@ -214,11 +214,17 @@ export async function fillOfficialTemplate(input: DeclarationInput) {
     zip.file(file, setCells(xml, writes));
   }
 
-  // 開いた時に全数式を再計算させる（入力セルだけ書き換えるため）
+  // 開いた時に全数式を再計算させる（入力セルだけ書き換えるため）。
+  // 原本の隠しシートには G13↔G17 の静的な循環参照があり、全再計算すると
+  // Excel が循環参照警告を出すため、反復計算も併せて有効化する（実行時の
+  // IF 分岐では循環しないため 1 回で収束する）。
+  const RECALC_ATTRS = 'fullCalcOnLoad="1" iterate="1" iterateCount="100" iterateDelta="0.001"';
   const withRecalc = workbookXml.includes("<calcPr")
-    ? workbookXml.replace(/<calcPr([^>]*?)\/>/, (m, attrs: string) =>
-        attrs.includes("fullCalcOnLoad") ? m : `<calcPr${attrs} fullCalcOnLoad="1"/>`)
-    : workbookXml.replace("</workbook>", '<calcPr fullCalcOnLoad="1"/></workbook>');
+    ? workbookXml.replace(/<calcPr([^>]*?)\/>/, (_m, attrs: string) => {
+        const kept = attrs.replace(/ (?:fullCalcOnLoad|iterate|iterateCount|iterateDelta)="[^"]*"/g, "");
+        return `<calcPr${kept} ${RECALC_ATTRS}/>`;
+      })
+    : workbookXml.replace("</workbook>", `<calcPr ${RECALC_ATTRS}/></workbook>`);
   zip.file("xl/workbook.xml", withRecalc);
 
   return zip.generateAsync({
