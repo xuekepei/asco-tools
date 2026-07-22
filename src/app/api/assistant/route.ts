@@ -17,6 +17,7 @@ import {
 } from "@/domain/declaration";
 import { getCurrentUser } from "@/lib/current-user";
 import { env } from "@/lib/env";
+import { getFeatureFlags } from "@/lib/feature-flags";
 
 export const maxDuration = 30;
 
@@ -29,6 +30,10 @@ export async function POST(request: Request) {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const featureFlags = await getFeatureFlags();
+  if (!featureFlags.assistant) {
+    return Response.json({ error: "assistant_disabled" }, { status: 404 });
   }
   if (!env.OPENAI_API_KEY) {
     return Response.json(

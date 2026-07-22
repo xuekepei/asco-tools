@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Save,
   ShieldCheck,
+  SlidersHorizontal,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -18,7 +19,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
-type AdminTab = "overview" | "users" | "declarations" | "exports";
+type AdminTab = "overview" | "users" | "declarations" | "exports" | "flags";
+
+type FeatureFlagItem = { key: string; label: string; description: string; enabled: boolean };
 type Viewer = {
   id: string;
   name: string;
@@ -85,6 +88,7 @@ const tabs: { id: AdminTab; label: string; icon: typeof Users }[] = [
   { id: "users", label: "ユーザー", icon: Users },
   { id: "declarations", label: "申告データ", icon: FileSpreadsheet },
   { id: "exports", label: "出力ログ", icon: Download },
+  { id: "flags", label: "機能スイッチ", icon: SlidersHorizontal },
 ];
 
 export function AdminDashboard({ viewer }: { viewer: Viewer }) {
@@ -95,6 +99,8 @@ export function AdminDashboard({ viewer }: { viewer: Viewer }) {
   const [exports, setExports] = useState<ExportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
+  const [featureFlags, setFeatureFlags] = useState<FeatureFlagItem[]>([]);
+  const [savingFlagKey, setSavingFlagKey] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [query, setQuery] = useState("");
 
@@ -105,13 +111,14 @@ export function AdminDashboard({ viewer }: { viewer: Viewer }) {
       fetch("/api/admin/users"),
       fetch("/api/admin/declarations"),
       fetch("/api/admin/exports"),
+      fetch("/api/admin/feature-flags"),
     ]);
     if (responses.some((response) => !response.ok)) {
       setNotice("管理データを読み込めませんでした");
       setLoading(false);
       return;
     }
-    const [overviewData, usersData, declarationsData, exportsData] =
+    const [overviewData, usersData, declarationsData, exportsData, flagsData] =
       await Promise.all(responses.map((response) => response.json()));
     setOverview(overviewData as Overview);
     setUsers((usersData as { items: AdminUser[] }).items);
@@ -119,6 +126,7 @@ export function AdminDashboard({ viewer }: { viewer: Viewer }) {
       (declarationsData as { items: DeclarationItem[] }).items,
     );
     setExports((exportsData as { items: ExportItem[] }).items);
+    setFeatureFlags((flagsData as { items: FeatureFlagItem[] }).items);
     setLoading(false);
   }, []);
 
@@ -177,6 +185,27 @@ export function AdminDashboard({ viewer }: { viewer: Viewer }) {
     setSavingUserId(null);
   };
 
+  const toggleFlag = async (item: FeatureFlagItem) => {
+    setSavingFlagKey(item.key);
+    setNotice("");
+    const response = await fetch("/api/admin/feature-flags", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ key: item.key, enabled: !item.enabled }),
+    });
+    if (response.ok) {
+      setFeatureFlags((current) =>
+        current.map((flag) =>
+          flag.key === item.key ? { ...flag, enabled: !item.enabled } : flag,
+        ),
+      );
+      setNotice(`「${item.label}」を${item.enabled ? "無効" : "有効"}にしました`);
+    } else {
+      setNotice("機能スイッチを更新できませんでした");
+    }
+    setSavingFlagKey(null);
+  };
+
   return (
     <div className="min-h-screen bg-[#f4f6f2] text-[#18231d]">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-[#dfe5df] bg-[#132e25] p-4 text-white lg:flex lg:flex-col">
@@ -185,7 +214,7 @@ export function AdminDashboard({ viewer }: { viewer: Viewer }) {
         <div className="mt-auto space-y-3"><Link href="/dashboard" className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-white/75 hover:bg-white/10"><ArrowLeft size={17} />ユーザー画面へ</Link><div className="rounded-2xl bg-white/10 p-3"><p className="truncate text-sm font-semibold">{viewer.name}</p><p className="truncate text-xs text-white/55">{viewer.email}</p><div className="mt-3 flex items-center justify-between"><span className="rounded-full bg-white/10 px-2 py-1 text-[10px] uppercase">{viewer.role}</span><button aria-label="ログアウト" onClick={() => authClient.signOut({ fetchOptions: { onSuccess: () => { window.location.href = "/"; } } })}><LogOut size={16} /></button></div></div></div>
       </aside>
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[#dfe5df] bg-white/95 px-4 backdrop-blur lg:ml-64 lg:px-8"><div className="flex items-center gap-3"><ShieldCheck className="text-[#25654c] lg:hidden" size={21} /><div><p className="font-semibold">{tabs.find((item) => item.id === tab)?.label}</p><p className="text-xs text-[#7d8981]">管理者専用</p></div></div><div className="flex items-center gap-3">{notice && <span className="hidden text-sm text-[#587066] sm:inline">{notice}</span>}<button className="button-secondary !px-3" onClick={() => void refresh()} disabled={loading}><RefreshCw className={cn(loading && "animate-spin")} size={17} />更新</button><Link href="/dashboard" className="button-ghost !px-2 lg:hidden"><ArrowLeft size={18} /></Link></div></header>
-      <main className="p-4 pb-16 lg:ml-64 lg:p-8"><div className="mx-auto max-w-[1320px]"><div className="mb-5 flex gap-2 overflow-x-auto lg:hidden">{tabs.map((item) => { const Icon = item.icon; return <button key={item.id} onClick={() => setTab(item.id)} className={cn("flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm", tab === item.id ? "bg-[#174c3c] text-white" : "bg-white text-[#5f6c64]")}><Icon size={16} />{item.label}</button>; })}</div>{loading && !overview ? <div className="grid min-h-[60vh] place-items-center"><LoaderCircle className="animate-spin text-[#2c7357]" size={30} /></div> : <>{tab === "overview" && overview && <OverviewPanel data={overview} />}{tab === "users" && <UsersPanel users={filteredUsers} query={query} viewer={viewer} savingUserId={savingUserId} onQuery={setQuery} onChange={updateLocalUser} onSave={saveUser} />}{tab === "declarations" && <DeclarationsPanel items={declarations} />}{tab === "exports" && <ExportsPanel items={exports} />}</>}</div></main>
+      <main className="p-4 pb-16 lg:ml-64 lg:p-8"><div className="mx-auto max-w-[1320px]"><div className="mb-5 flex gap-2 overflow-x-auto lg:hidden">{tabs.map((item) => { const Icon = item.icon; return <button key={item.id} onClick={() => setTab(item.id)} className={cn("flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm", tab === item.id ? "bg-[#174c3c] text-white" : "bg-white text-[#5f6c64]")}><Icon size={16} />{item.label}</button>; })}</div>{loading && !overview ? <div className="grid min-h-[60vh] place-items-center"><LoaderCircle className="animate-spin text-[#2c7357]" size={30} /></div> : <>{tab === "overview" && overview && <OverviewPanel data={overview} />}{tab === "users" && <UsersPanel users={filteredUsers} query={query} viewer={viewer} savingUserId={savingUserId} onQuery={setQuery} onChange={updateLocalUser} onSave={saveUser} />}{tab === "declarations" && <DeclarationsPanel items={declarations} />}{tab === "exports" && <ExportsPanel items={exports} />}{tab === "flags" && <FlagsPanel items={featureFlags} viewer={viewer} savingKey={savingFlagKey} onToggle={toggleFlag} />}</>}</div></main>
     </div>
   );
 }
@@ -247,6 +276,11 @@ function UsersPanel({ users, query, viewer, savingUserId, onQuery, onChange, onS
       </section>
     </div>
   );
+}
+
+function FlagsPanel({ items, viewer, savingKey, onToggle }: { items: FeatureFlagItem[]; viewer: Viewer; savingKey: string | null; onToggle: (item: FeatureFlagItem) => void }) {
+  const readOnly = viewer.role !== "admin";
+  return <div><div className="mb-7"><p className="text-sm font-semibold text-[#2e765a]">FEATURE FLAGS</p><h1 className="mt-2 text-3xl font-semibold tracking-[-.035em]">機能スイッチ</h1><p className="mt-2 text-[#6c7870]">OFF の機能はユーザー画面から非表示になります（準備中の機能を公開前に隠せます）。{readOnly && "サポート権限では閲覧のみ可能です。"}</p></div><section className="panel divide-y divide-[#e8ece8]">{items.map((item) => <div key={item.key} className="flex items-center justify-between gap-4 px-6 py-5"><div><p className="font-semibold">{item.label}</p><p className="mt-1 text-sm text-[#77837b]">{item.description}</p></div><button type="button" role="switch" aria-checked={item.enabled} disabled={readOnly || savingKey !== null} onClick={() => onToggle(item)} className={cn("relative h-7 w-13 shrink-0 rounded-full transition disabled:cursor-not-allowed disabled:opacity-60", item.enabled ? "bg-[#174c3c]" : "bg-[#ccd6cf]")}><span className={cn("absolute top-0.5 grid size-6 place-items-center rounded-full bg-white shadow transition-all", item.enabled ? "left-[26px]" : "left-0.5")}>{savingKey === item.key && <LoaderCircle className="animate-spin text-[#2c7357]" size={13} />}</span></button></div>)}</section></div>;
 }
 
 function DeclarationsPanel({ items }: { items: DeclarationItem[] }) {

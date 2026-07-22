@@ -13,6 +13,7 @@ import { businessSectionSchema, normalizeDeclaration } from "@/domain/declaratio
 import { getAdminContext } from "@/lib/admin";
 import { auth } from "@/lib/auth";
 import { env } from "@/lib/env";
+import { getFeatureFlags } from "@/lib/feature-flags";
 
 export async function DashboardEntry({ view, section = "business", declarationId }: { view: WorkspaceView; section?: Section; declarationId?: string }) {
   const currentSession = await auth.api.getSession({ headers: await headers() });
@@ -44,6 +45,7 @@ export async function DashboardEntry({ view, section = "business", declarationId
   }
 
   const admin = await getAdminContext();
+  const featureFlags = await getFeatureFlags();
   const routeKey = `${view}:${declarationId ?? "new"}:${section}`;
   return (
     <DeclarationWorkspace
@@ -53,6 +55,7 @@ export async function DashboardEntry({ view, section = "business", declarationId
         email: currentSession.user.email,
       }}
       aiEnabled={Boolean(env.OPENAI_API_KEY)}
+      showAssistant={featureFlags.assistant}
       isAdmin={Boolean(admin)}
       initialView={view}
       initialSection={section}

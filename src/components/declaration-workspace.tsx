@@ -132,7 +132,7 @@ const wageGroups: { countKey: keyof MonthEntry; wageKey: keyof MonthEntry; label
   { countKey: "insuredOfficerWorkers", wageKey: "insuredOfficerWages", label: "役員(雇用)", helpKey: "insuredWorkers" },
 ];
 
-export function DeclarationWorkspace({ user, aiEnabled, isAdmin, initialView = "list", initialSection = "business", initialDeclaration = null }: { user: { name: string; email: string }; aiEnabled: boolean; isAdmin: boolean; initialView?: WorkspaceView; initialSection?: Section; initialDeclaration?: { id: string; formData: unknown } | null }) {
+export function DeclarationWorkspace({ user, aiEnabled, showAssistant = false, isAdmin, initialView = "list", initialSection = "business", initialDeclaration = null }: { user: { name: string; email: string }; aiEnabled: boolean; showAssistant?: boolean; isAdmin: boolean; initialView?: WorkspaceView; initialSection?: Section; initialDeclaration?: { id: string; formData: unknown } | null }) {
   const router = useRouter();
   const [data, setData] = useState<DeclarationInput>(() => initialDeclaration ? normalizeDeclaration(initialDeclaration.formData) : createEmptyDeclaration());
   const [view] = useState<WorkspaceView>(initialView);
@@ -582,19 +582,19 @@ export function DeclarationWorkspace({ user, aiEnabled, isAdmin, initialView = "
       </main>
 
       {paywall && <CreditPaywall loading={billingLoading} configured={billingInfo.configured} packs={billingInfo.packs} onCheckout={openCheckout} onClose={() => setPaywall(false)} />}
-      {view === "editor" && <button
+      {view === "editor" && showAssistant && <button
         onClick={() => setAssistantOpen(true)}
         className="fixed bottom-6 right-6 z-30 flex items-center gap-3 rounded-2xl bg-[#174c3c] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_35px_rgba(23,76,60,.3)] transition hover:-translate-y-0.5 hover:bg-[#103e31]"
       >
         <span className="relative"><Sparkles size={19} /><span className="absolute -right-1 -top-1 size-2 rounded-full bg-[#b9e4a9]" /></span>
         申告助手
       </button>}
-      <DeclarationAssistant
+      {showAssistant && <DeclarationAssistant
         open={assistantOpen}
         onClose={() => setAssistantOpen(false)}
         declaration={data}
         enabled={aiEnabled}
-      />
+      />}
     </div>
   );
 }

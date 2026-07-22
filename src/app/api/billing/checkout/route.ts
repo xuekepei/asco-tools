@@ -8,6 +8,7 @@ import { exportCreditPurchase, user } from "@/db/schema";
 import { getCurrentUser } from "@/lib/current-user";
 import { env } from "@/lib/env";
 import { exportPackKeys, getExportPack } from "@/lib/export-packs";
+import { getFeatureFlags } from "@/lib/feature-flags";
 import { getStripe, stripeErrorResponse } from "@/lib/stripe";
 
 const inputSchema = z.object({ pack: z.enum(exportPackKeys) });
@@ -20,6 +21,8 @@ function integrationIdentifier() {
 export async function POST(request: Request) {
   const currentUser = await getCurrentUser();
   if (!currentUser) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const featureFlags = await getFeatureFlags();
+  if (!featureFlags.billing) return Response.json({ error: "billing_disabled" }, { status: 404 });
   const parsed = inputSchema.safeParse(await request.json());
   if (!parsed.success) return Response.json({ error: "invalid_input" }, { status: 400 });
   const pack = getExportPack(parsed.data.pack);

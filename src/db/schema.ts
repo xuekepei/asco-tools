@@ -293,6 +293,12 @@ export const exportCreditLedger = mysqlTable(
   ],
 );
 
+export const featureFlag = mysqlTable("feature_flag", {
+  key: varchar("key", { length: 64 }).primaryKey(),
+  enabled: boolean("enabled").notNull().default(false),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});
+
 export const schema = {
   user,
   session,
@@ -307,4 +313,5 @@ export const schema = {
   exportCreditAccount,
   exportCreditPurchase,
   exportCreditLedger,
+  featureFlag,
 };

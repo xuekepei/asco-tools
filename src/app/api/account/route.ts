@@ -6,6 +6,7 @@ import { exportCreditAccount, stripeInvoice, user } from "@/db/schema";
 import { getCurrentUser } from "@/lib/current-user";
 import { ensureExportCreditAccount } from "@/lib/export-credits";
 import { getExportPacks } from "@/lib/export-packs";
+import { getFeatureFlags } from "@/lib/feature-flags";
 import { isStripeConfigured } from "@/lib/stripe";
 
 const accountSchema = z.object({
@@ -51,7 +52,7 @@ export async function GET() {
     ? Response.json({
         account: record,
         billing: {
-          configured: isStripeConfigured(),
+          configured: (await getFeatureFlags()).billing && isStripeConfigured(),
           credits: credits[0] ?? { balance: 0, lifetimePurchased: 0, lifetimeUsed: 0, complimentaryGranted: 0 },
           packs: getExportPacks().map(({ key, credits, priceId }) => ({ key, credits, available: Boolean(priceId) })),
           invoices,
